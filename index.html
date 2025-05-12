@@ -1,26 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coming Soon</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            font-size: 48px;
-            color: #333;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tier List Maker</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <h1>Coming Soon...</h1>
+  <div class="container">
+    <h1>Wigger Tier List</h1>
+    <div class="upload-section">
+      <label class="upload-label">
+        Upload Images
+        <input id="image-upload" type="file" accept="image/*" multiple style="display:none;">
+      </label>
+    </div>
+    <div id="tier-list">
+      <div class="tier-row" data-tier="S">
+        <div class="tier-label" style="background:#f08080;">S</div>
+        <div class="tier-images" data-tier-images="S"></div>
+      </div>
+      <div class="tier-row" data-tier="A">
+        <div class="tier-label" style="background:#f7b77e;">A</div>
+        <div class="tier-images" data-tier-images="A"></div>
+      </div>
+      <div class="tier-row" data-tier="B">
+        <div class="tier-label" style="background:#f7d77e;">B</div>
+        <div class="tier-images" data-tier-images="B"></div>
+      </div>
+      <div class="tier-row" data-tier="C">
+        <div class="tier-label" style="background:#f7f77e;">C</div>
+        <div class="tier-images" data-tier-images="C"></div>
+      </div>
+      <div class="tier-row" data-tier="D">
+        <div class="tier-label" style="background:#c7fa8c;">D</div>
+        <div class="tier-images" data-tier-images="D"></div>
+      </div>
+    </div>
+    <div class="unused-row">
+      <div class="unused-label">Unused Wiggers</div>
+      <div class="unused-images" id="unused-images"></div>
+    </div>
+  </div>
+  <script>
+    // State: { id: string, url: string, tier: string }
+    let images = [
+      { id: 'img-0', url: 'wigger.png', tier: 'unused' },
+      { id: 'img-1', url: 'wigger1.webp', tier: 'unused' },
+      { id: 'img-2', url: 'wigger2.png', tier: 'unused' },
+      { id: 'img-3', url: 'wigger3.jpg', tier: 'unused' },
+      { id: 'img-4', url: 'wigger4.jpg', tier: 'unused' },
+      { id: 'img-5', url: 'wigger5.png', tier: 'unused' },
+      { id: 'img-6', url: 'wigger6.png', tier: 'unused' },
+      { id: 'img-7', url: 'wigger7.jpg', tier: 'unused' },
+      { id: 'img-8', url: 'wigger8.jpeg', tier: 'unused' }
+    ];
+    let idCounter = 9;
+    const TIERS = ['S', 'A', 'B', 'C', 'D', 'unused'];
+
+    // DOM references
+    const tierImagesContainers = {};
+    TIERS.forEach(tier => {
+      if (tier === 'unused') {
+        tierImagesContainers[tier] = document.getElementById('unused-images');
+      } else {
+        tierImagesContainers[tier] = document.querySelector(`[data-tier-images="${tier}"]`);
+      }
+    });
+
+    // Handle image upload
+    document.getElementById('image-upload').addEventListener('change', function(e) {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        const url = URL.createObjectURL(file);
+        images.push({ id: 'img-' + (idCounter++), url, tier: 'unused' });
+      });
+      render();
+      e.target.value = ''; // reset input
+    });
+
+    // Make upload label clickable
+    document.querySelector('.upload-label').addEventListener('click', () => {
+      document.getElementById('image-upload').click();
+    });
+
+    // Drag and Drop logic
+    function onDragStart(e) {
+      e.dataTransfer.setData('text/plain', e.target.dataset.id);
+      setTimeout(() => e.target.classList.add('dragging'), 0);
+    }
+    function onDragEnd(e) {
+      e.target.classList.remove('dragging');
+    }
+    function onDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('dragging-over');
+    }
+    function onDragLeave(e) {
+      e.currentTarget.classList.remove('dragging-over');
+    }
+    function onDrop(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('dragging-over');
+      const id = e.dataTransfer.getData('text/plain');
+      // Find the correct drop zone (with data-tier or id unused-images)
+      let dropZone = e.currentTarget;
+      while (
+        !dropZone.dataset.tier &&
+        dropZone.id !== 'unused-images' &&
+        dropZone !== document.body
+      ) {
+        dropZone = dropZone.parentElement;
+      }
+      const tier = dropZone.dataset.tier || (dropZone.id === 'unused-images' ? 'unused' : null);
+      if (!tier) return;
+      const img = images.find(img => img.id === id);
+      if (img) {
+        img.tier = tier;
+        render();
+      }
+    }
+
+    // Render function
+    function render() {
+      // Clear all containers
+      TIERS.forEach(tier => {
+        tierImagesContainers[tier].innerHTML = '';
+      });
+      // Place images in their containers
+      images.forEach(img => {
+        const imgElem = document.createElement('img');
+        imgElem.src = img.url;
+        imgElem.className = 'tier-image';
+        imgElem.draggable = true;
+        imgElem.dataset.id = img.id;
+        // Set title to file name without extension
+        const fileName = img.url.split('/').pop().split('.').slice(0, -1).join('.');
+        imgElem.title = fileName;
+        imgElem.addEventListener('dragstart', onDragStart);
+        imgElem.addEventListener('dragend', onDragEnd);
+        tierImagesContainers[img.tier].appendChild(imgElem);
+      });
+    }
+
+    // Set up drop zones
+    TIERS.forEach(tier => {
+      const container = tierImagesContainers[tier];
+      container.addEventListener('dragover', onDragOver);
+      container.addEventListener('dragleave', onDragLeave);
+      container.addEventListener('drop', onDrop);
+      if (tier === 'unused') container.dataset.tier = 'unused';
+    });
+
+    // Initial render
+    render();
+  </script>
 </body>
 </html>
